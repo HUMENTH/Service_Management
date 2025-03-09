@@ -13,7 +13,7 @@ class QualityInspectionTemplateCopy(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		from service_management.custom_stock.doctype.item_quality_inspection_parameter_copy.item_quality_inspection_parameter_copy import (
+		from service_management.service_management.doctype.item_quality_inspection_parameter_copy.item_quality_inspection_parameter_copy import (
 			ItemQualityInspectionParameterCopy,
 		)
 

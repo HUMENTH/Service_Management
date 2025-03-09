@@ -7,11 +7,11 @@ from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import cint, cstr, flt, get_link_to_form, get_number_format_info
 
-from service_management.custom_stock.doctype.quality_inspection_template_copy.quality_inspection_template_copy import (
+from service_management.service_management.doctype.quality_inspection_template_copy.quality_inspection_template_copy import (
 	get_template_details,
 )
 
-class QualityInspectionCopy(Document):
+class tMaintenanceInspection(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -20,7 +20,7 @@ class QualityInspectionCopy(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		from service_management.custom_stock.doctype.quality_inspection_reading_copy.quality_inspection_reading_copy import (
+		from service_management.service_management.doctype.quality_inspection_reading_copy.quality_inspection_reading_copy import (
 			QualityInspectionReading,
 		)
 
@@ -371,7 +371,7 @@ def make_quality_inspection(source_name, target_doc=None):
 		source_name,
 		{
 			"BOM": {
-				"doctype": "Quality Inspection Copy",
+				"doctype": "Maintenance Inspection",
 				"validation": {"docstatus": ["=", 1]},
 				"field_map": {"name": "bom_no", "item": "item_code", "stock_uom": "uom", "stock_qty": "qty"},
 			}

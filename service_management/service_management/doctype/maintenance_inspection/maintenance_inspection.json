@@ -246,8 +246,8 @@
  "links": [],
  "modified": "2025-03-08 22:59:08.632135",
  "modified_by": "Administrator",
- "module": "Custom Stock",
- "name": "Quality Inspection Copy",
+ "module": "Service Management",
+ "name": "Maintenance Inspection",
  "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [

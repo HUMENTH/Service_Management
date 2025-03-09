@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestQualityInspectionCopy(FrappeTestCase):
+class TestMaintenanceInspection(FrappeTestCase):
 	pass

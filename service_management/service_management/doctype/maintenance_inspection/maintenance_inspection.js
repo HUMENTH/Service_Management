@@ -3,7 +3,7 @@
 
 cur_frm.cscript.refresh = cur_frm.cscript.inspection_type;
 
-frappe.ui.form.on("Quality Inspection Copy", {
+frappe.ui.form.on("Maintenance Inspection", {
 	setup: function (frm) {
 		frm.set_query("reference_name", function () {
 			return {
@@ -51,7 +51,7 @@ frappe.ui.form.on("Quality Inspection Copy", {
 				else filters["parent"] = doc.reference_name;
 
 				return {
-					query: "service_management.custom_stock.doctype.quality_inspection_copy.quality_inspection_copy.item_query",
+					query: "service_management.custom_stock.doctype.maintenance_inspection.maintenance_inspection.item_query",
 					filters: filters,
 				};
 			}
