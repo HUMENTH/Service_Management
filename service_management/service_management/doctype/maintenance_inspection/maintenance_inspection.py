@@ -1,53 +1,46 @@
 # Copyright (c) 2025, Manal Alsubaei + हिमHUMENTH and contributors
 # For license information, please see license.txt
 
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import cint, cstr, flt, get_link_to_form, get_number_format_info
 
-from service_management.service_management.doctype.quality_inspection_template_copy.quality_inspection_template_copy import (
+from erpnext.stock.doctype.quality_inspection_template.quality_inspection_template import (
 	get_template_details,
 )
 
-class tMaintenanceInspection(Document):
+
+class MaintenanceInspection(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
 	from typing import TYPE_CHECKING
 
 	if TYPE_CHECKING:
+		from erpnext.stock.doctype.quality_inspection_reading.quality_inspection_reading import QualityInspectionReading
 		from frappe.types import DF
-
-		from service_management.service_management.doctype.quality_inspection_reading_copy.quality_inspection_reading_copy import (
-			QualityInspectionReading,
-		)
 
 		amended_from: DF.Link | None
 		batch_no: DF.Link | None
 		bom_no: DF.Link | None
+		child_row_reference: DF.Data | None
+		company: DF.Link | None
 		description: DF.SmallText | None
 		inspected_by: DF.Link
 		inspection_type: DF.Literal["", "Incoming", "Outgoing", "In Process"]
 		item_code: DF.Link
 		item_name: DF.Data | None
 		item_serial_no: DF.Link | None
+		letter_head: DF.Link | None
 		manual_inspection: DF.Check
 		naming_series: DF.Literal["MAT-QA-.YYYY.-"]
 		quality_inspection_template: DF.Link | None
-		readings: DF.Table[QualityInspectionReadingCopy]
+		readings: DF.Table[QualityInspectionReading]
 		reference_name: DF.DynamicLink
-		reference_type: DF.Literal[
-			"",
-			"Purchase Receipt",
-			"Purchase Invoice",
-			"Subcontracting Receipt",
-			"Delivery Note",
-			"Sales Invoice",
-			"Stock Entry",
-			"Job Card",
-		]
+		reference_type: DF.Literal["", "Purchase Receipt", "Purchase Invoice", "Subcontracting Receipt", "Delivery Note", "Sales Invoice", "Stock Entry", "Job Card"]
 		remarks: DF.Text | None
 		report_date: DF.Date
 		sample_size: DF.Float
@@ -60,7 +53,7 @@ class tMaintenanceInspection(Document):
 			self.get_item_specification_details()
 
 		if self.inspection_type == "In Process" and self.reference_type == "Job Card":
-			item_qi_template = frappe.db.get_value("Item", self.item_code, "quality_inspection_template_copy")
+			item_qi_template = frappe.db.get_value("Item", self.item_code, "quality_inspection_template")
 			parameters = get_template_details(item_qi_template)
 			for reading in self.readings:
 				for d in parameters:
@@ -72,6 +65,71 @@ class tMaintenanceInspection(Document):
 			self.inspect_and_set_status()
 
 		self.validate_inspection_required()
+		self.set_child_row_reference()
+		self.set_company()
+
+	def set_company(self):
+		if self.reference_type and self.reference_name:
+			company = frappe.get_cached_value(self.reference_type, self.reference_name, "company")
+			if company != self.company:
+				self.company = company
+
+	def set_child_row_reference(self):
+		if self.child_row_reference:
+			return
+
+		if not (self.reference_type and self.reference_name):
+			return
+
+		doctype = self.reference_type + " Item"
+		if self.reference_type == "Stock Entry":
+			doctype = "Stock Entry Detail"
+
+		child_row_references = frappe.get_all(
+			doctype,
+			filters={"parent": self.reference_name, "item_code": self.item_code},
+			pluck="name",
+		)
+
+		if not child_row_references:
+			return
+
+		if len(child_row_references) == 1:
+			self.child_row_reference = child_row_references[0]
+		else:
+			self.distribute_child_row_reference(child_row_references)
+
+	def distribute_child_row_reference(self, child_row_references):
+		quality_inspections = frappe.get_all(
+			"Quality Inspection",
+			filters={
+				"reference_name": self.reference_name,
+				"item_code": self.item_code,
+				"docstatus": ("<", 2),
+			},
+			fields=["name", "child_row_reference", "docstatus"],
+			order_by="child_row_reference desc",
+		)
+
+		for row in quality_inspections:
+			if not child_row_references:
+				break
+
+			if row.child_row_reference and row.child_row_reference in child_row_references:
+				child_row_references.remove(row.child_row_reference)
+				continue
+
+			if row.docstatus == 1:
+				continue
+
+			if row.name == self.name:
+				self.child_row_reference = child_row_references[0]
+			else:
+				frappe.db.set_value(
+					"Quality Inspection", row.name, "child_row_reference", child_row_references[0]
+				)
+
+			child_row_references.remove(child_row_references[0])
 
 	def validate_inspection_required(self):
 		if self.reference_type in ["Purchase Receipt", "Purchase Invoice"] and not frappe.get_cached_value(
@@ -99,7 +157,7 @@ class tMaintenanceInspection(Document):
 	def get_item_specification_details(self):
 		if not self.quality_inspection_template:
 			self.quality_inspection_template = frappe.db.get_value(
-				"Item", self.item_code, "quality_inspection_template_copy"
+				"Item", self.item_code, "quality_inspection_template"
 			)
 
 		if not self.quality_inspection_template:
@@ -116,10 +174,10 @@ class tMaintenanceInspection(Document):
 	def get_quality_inspection_template(self):
 		template = ""
 		if self.bom_no:
-			template = frappe.db.get_value("BOM", self.bom_no, "quality_inspection_template_copy")
+			template = frappe.db.get_value("BOM", self.bom_no, "quality_inspection_template")
 
 		if not template:
-			template = frappe.db.get_value("BOM", self.item_code, "quality_inspection_template_copy")
+			template = frappe.db.get_value("BOM", self.item_code, "quality_inspection_template")
 
 		self.quality_inspection_template = template
 		self.get_item_specification_details()
@@ -155,35 +213,38 @@ class tMaintenanceInspection(Document):
 				)
 
 		else:
-			args = [quality_inspection, self.modified, self.reference_name, self.item_code]
 			doctype = self.reference_type + " Item"
 
 			if self.reference_type == "Stock Entry":
 				doctype = "Stock Entry Detail"
 
-			if self.reference_type and self.reference_name:
-				conditions = ""
+			if doctype and self.reference_name:
+				child_doc = frappe.qb.DocType(doctype)
+
+				query = (
+					frappe.qb.update(child_doc)
+					.set(child_doc.quality_inspection, quality_inspection)
+					.where(
+						(child_doc.parent == self.reference_name) & (child_doc.item_code == self.item_code)
+					)
+				)
+
 				if self.batch_no and self.docstatus == 1:
-					conditions += " and t1.batch_no = %s"
-					args.append(self.batch_no)
+					query = query.where(child_doc.batch_no == self.batch_no)
 
 				if self.docstatus == 2:  # if cancel, then remove qi link wherever same name
-					conditions += " and t1.quality_inspection = %s"
-					args.append(self.name)
+					query = query.where(child_doc.quality_inspection == self.name)
 
-				frappe.db.sql(
-					f"""
-					UPDATE
-						`tab{doctype}` t1, `tab{self.reference_type}` t2
-					SET
-						t1.quality_inspection = %s, t2.modified = %s
-					WHERE
-						t1.parent = %s
-						and t1.item_code = %s
-						and t1.parent = t2.name
-						{conditions}
-				""",
-					args,
+				if self.child_row_reference:
+					query = query.where(child_doc.name == self.child_row_reference)
+
+				query.run()
+
+				frappe.db.set_value(
+					self.reference_type,
+					self.reference_name,
+					"modified",
+					self.modified,
 				)
 
 	def inspect_and_set_status(self):
@@ -371,7 +432,7 @@ def make_quality_inspection(source_name, target_doc=None):
 		source_name,
 		{
 			"BOM": {
-				"doctype": "Maintenance Inspection",
+				"doctype": "Quality Inspection",
 				"validation": {"docstatus": ["=", 1]},
 				"field_map": {"name": "bom_no", "item": "item_code", "stock_uom": "uom", "stock_qty": "qty"},
 			}

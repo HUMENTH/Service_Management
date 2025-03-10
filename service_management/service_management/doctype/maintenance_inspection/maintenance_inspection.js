@@ -51,7 +51,7 @@ frappe.ui.form.on("Maintenance Inspection", {
 				else filters["parent"] = doc.reference_name;
 
 				return {
-					query: "service_management.custom_stock.doctype.maintenance_inspection.maintenance_inspection.item_query",
+					query: "service_management.service_management.doctype.maintenance_inspection.maintenance_inspection.item_query",
 					filters: filters,
 				};
 			}
